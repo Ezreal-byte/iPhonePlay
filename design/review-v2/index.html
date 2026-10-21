@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>iPhoneMirror · 设计审阅 v2</title>
+<style>
+:root{color-scheme:dark;font-family:"Segoe UI","Microsoft YaHei",sans-serif;background:#111318;color:#eef1f6}
+*{box-sizing:border-box}body{margin:0}button,a,summary{touch-action:manipulation}button,select{font:inherit}
+header{padding:20px 28px 16px;border-bottom:1px solid #30343d;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+h1{font-size:20px;margin:0 0 5px;font-weight:600}p{margin:0;color:#b1b9c7;font-size:14px;line-height:1.7}
+a{color:#91beff;text-underline-offset:3px}button{border:1px solid #3d4451;background:transparent;color:inherit;padding:9px 15px;border-radius:7px;cursor:pointer}
+button:hover{background:#242a34}button[aria-pressed="true"]{background:#24436e;border-color:#78aaf1;color:#fff}button:disabled{opacity:.4;cursor:default}
+:focus-visible{outline:2px solid #a2c6ff;outline-offset:3px}
+nav{display:flex;gap:8px;flex-wrap:wrap;padding:16px 28px}
+.review-bar{display:flex;gap:16px;justify-content:space-between;align-items:center;flex-wrap:wrap;padding:0 28px 12px}
+.theme{display:flex;align-items:center;gap:8px}.theme span{font-size:13px;color:#b1b9c7}
+.stage{margin:0 20px;background:#0c0e12;min-height:220px;display:flex;justify-content:center;align-items:center}
+.stage a{display:block;width:100%;text-align:center}.stage img{width:100%;height:auto;max-height:74vh;object-fit:contain;display:block}
+footer{padding:14px 28px 24px}.foot-row{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}
+.paging{display:flex;gap:8px;align-items:center}.paging span{font-size:13px;color:#b1b9c7;min-width:40px;text-align:center}
+details{margin-top:18px;color:#b1b9c7;font-size:13px;line-height:1.8}summary{cursor:pointer;color:#d2d8e2}li{margin:5px 0}
+.scope{color:#a8b7cc;font-size:13px;margin-top:4px}
+@media(max-width:640px){header{padding:16px}nav{padding:12px 16px;gap:6px}nav button{padding:8px 10px;font-size:13px}.review-bar{padding:0 16px 10px}.stage{margin:0 8px}.stage img{max-height:none}footer{padding:12px 16px}.theme span{flex-basis:100%}.theme{flex-wrap:wrap}}
+</style>
+</head>
+<body>
+<header><div><h1>iPhoneMirror · 设计审阅 v2</h1><p>静态设计稿 · 待确认，尚未实施</p></div><a href="design-manifest.json" target="_blank" rel="noopener">生成记录与提示词</a></header>
+<nav aria-label="设计页面" id="pages"></nav>
+<div class="review-bar"><div><strong id="title"></strong><p id="scope" class="scope"></p></div><div class="theme" aria-label="设计稿主题"><button type="button" id="dark" aria-pressed="true">暗黑</button><button type="button" id="light" aria-pressed="false">明亮</button><span id="theme-note" aria-live="polite"></span></div></div>
+<main class="stage"><a id="original" href="images/02-mirror-dark.png" target="_blank" rel="noopener" aria-label="打开当前设计原图"><img id="screen" src="images/02-mirror-dark.png" alt="投屏工作区，暗黑设计稿"></a></main>
+<footer><div class="foot-row"><p id="description" aria-live="polite"></p><div class="paging"><button type="button" id="prev">上一页</button><span id="position"></span><button type="button" id="next">下一页</button></div></div>
+<details><summary>设计约束与稿件范围</summary><ul>
+<li>沿用方案 2 的视觉风格，首屏融合方案 3 的居中布局。本册为五个页面／场景、八张图，不是八套独立方案。</li>
+<li>投屏只呈现实际源画面并保持比例，不添加 iPhone 机身、边框、摄像头或模拟外壳。</li>
+<li>AirPlay 投屏与蓝牙反控独立；辅助触控、配对和设备确认需要用户在手机上完成。失焦、断线或按 F9 时释放键鼠。</li>
+<li>同一局域网允许电脑通过网线连接。暗黑首屏稿中的“同一 Wi-Fi”说明以此为准。</li>
+<li>界面缩放相对 Windows 的 DPI 缩放计算，100% 不表示关闭系统缩放。</li>
+<li>关闭到托盘时，应明确提示后台是否保持投屏；进入后台后释放键鼠控制。</li>
+<li>设置当前展开“外观”；“画面与声音”“键鼠控制”“高级与关于”只展示分类入口。</li>
+<li>前三个主要表面（首屏、工作区、设置）提供明亮稿；蓝牙引导和恢复页当前仅展开暗黑稿。图片中的控件是静态示意。</li>
+</ul></details>
+</footer>
+<script>
+const designs=[
+{id:"welcome",title:"首次进入",dark:"01-welcome-dark.png",light:"06-welcome-light.png",description:"直接引导 AirPlay 连接，蓝牙反控可稍后设置。",scope:"首次打开／等待 iPhone 连接"},
+{id:"mirror",title:"投屏工作区",dark:"02-mirror-dark.png",light:"07-mirror-light.png",description:"仅保留真实画面，无 iPhone 机身边框；常用操作集中在底部。",scope:"AirPlay 已连接 · 仅投屏"},
+{id:"control",title:"蓝牙反控",dark:"03-control-dark.png",description:"画面保持可见，右侧引导手机配对；允许跳过，并固定提示 F9 释放键鼠。",scope:"辅助触控已确认 · 等待手机配对"},
+{id:"settings",title:"设置",dark:"04-settings-dark.png",light:"08-settings-light.png",description:"按任务分类，当前展开外观页；其他设置分类仅展示导航入口。",scope:"外观 · 明亮／暗黑／跟随系统"},
+{id:"recovery",title:"连接恢复",dark:"05-recovery-dark.png",description:"断线即释放键鼠；用手机操作指引恢复连接，诊断信息折叠收纳。",scope:"连接已中断 · 画面暂停"}
+];
+let index=1,theme="dark";
+const byId=id=>document.getElementById(id);
+const pages=byId("pages");
+designs.forEach((design,i)=>{const button=document.createElement("button");button.type="button";button.textContent=design.title;button.dataset.page=design.id;button.addEventListener("click",()=>{index=i;render()});pages.appendChild(button)});
+function render(){
+const design=designs[index],actualTheme=design[theme]?theme:"dark",file="images/"+design[actualTheme];
+byId("title").textContent=design.title;byId("scope").textContent=design.scope;
+byId("screen").src=file;byId("screen").alt=design.title+" · "+(actualTheme==="dark"?"暗黑":"明亮")+"设计稿";
+byId("original").href=file;byId("description").textContent=design.description;byId("position").textContent=(index+1)+" / "+designs.length;
+byId("prev").disabled=index===0;byId("next").disabled=index===designs.length-1;
+byId("light").disabled=!design.light;byId("theme-note").textContent=design.light?"点击画面查看原图":"明亮稿未单独展开";
+byId("dark").setAttribute("aria-pressed",String(actualTheme==="dark"));byId("light").setAttribute("aria-pressed",String(actualTheme==="light"));
+Array.from(pages.children).forEach((button,i)=>button.setAttribute("aria-pressed",String(index===i)));
+}
+byId("dark").addEventListener("click",()=>{theme="dark";render()});
+byId("light").addEventListener("click",()=>{theme="light";render()});
+byId("prev").addEventListener("click",()=>{if(index>0){index--;render()}});
+byId("next").addEventListener("click",()=>{if(index<designs.length-1){index++;render()}});
+render();
+</script>
+</body>
+</html>

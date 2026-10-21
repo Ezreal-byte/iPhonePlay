@@ -1,0 +1,15 @@
+/target/
+/runtime/
+/dist/
+/build/
+*.partial.mp4
+/validation/screenshots/
+/.env
+/.env.*
+!/.env.example
+/settings.json
+/logs/
+/tmp/
+*.log
+*.pfx
+*.p12

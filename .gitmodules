@@ -1,0 +1,3 @@
+[submodule "iPhoneMirror"]
+	path = iPhoneMirror
+	url = https://github.com/RayrenSX/iPhoneMirror.git

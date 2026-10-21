@@ -1,0 +1,193 @@
+//! HID report-map version 3, compatible with the pinned iPhoneMirror baseline.
+//! Report IDs are carried by the Report Reference descriptor, never in the payload.
+use std::collections::BTreeSet;
+
+pub const REPORT_MAP_VERSION: u8 = 3;
+pub const HID_INFORMATION: &[u8] = &[0x11, 0x01, 0x00, 0x03];
+pub const REPORT_MAP: &[u8] = &[
+    0x05, 0x01, 0x09, 0x06, 0xA1, 0x01, 0x85, 0x01, 0x05, 0x07, 0x19, 0xE0, 0x29, 0xE7, 0x15, 0x00,
+    0x25, 0x01, 0x75, 0x01, 0x95, 0x08, 0x81, 0x02, 0x75, 0x08, 0x95, 0x01, 0x81, 0x01, 0x75, 0x08,
+    0x95, 0x06, 0x15, 0x00, 0x25, 0x65, 0x05, 0x07, 0x19, 0x00, 0x29, 0x65, 0x81, 0x00, 0xC0, 0x05,
+    0x01, 0x09, 0x02, 0xA1, 0x01, 0x85, 0x02, 0x09, 0x01, 0xA1, 0x00, 0x05, 0x09, 0x19, 0x01, 0x29,
+    0x05, 0x15, 0x00, 0x25, 0x01, 0x75, 0x01, 0x95, 0x05, 0x81, 0x02, 0x75, 0x03, 0x95, 0x01, 0x81,
+    0x01, 0x05, 0x01, 0x09, 0x30, 0x09, 0x31, 0x16, 0x01, 0x80, 0x26, 0xFF, 0x7F, 0x75, 0x10, 0x95,
+    0x02, 0x81, 0x06, 0x09, 0x38, 0x15, 0x81, 0x25, 0x7F, 0x75, 0x08, 0x95, 0x01, 0x81, 0x06, 0x85,
+    0x03, 0x09, 0x48, 0x15, 0x00, 0x25, 0x0A, 0x75, 0x08, 0x95, 0x01, 0xB1, 0x02, 0xC0, 0xC0, 0x05,
+    0x0C, 0x09, 0x01, 0xA1, 0x01, 0x85, 0x04, 0x15, 0x00, 0x26, 0xFF, 0x03, 0x75, 0x10, 0x95, 0x01,
+    0x19, 0x00, 0x2A, 0xFF, 0x03, 0x81, 0x00, 0xC0, 0x05, 0x0C, 0x09, 0x01, 0xA1, 0x01, 0x85, 0x05,
+    0x15, 0x00, 0x25, 0x01, 0x75, 0x01, 0x95, 0x0D, 0x0A, 0x24, 0x02, 0x09, 0x40, 0x0A, 0x23, 0x02,
+    0x0A, 0xAE, 0x01, 0x0A, 0x21, 0x02, 0x81, 0x02, 0x95, 0x03, 0x75, 0x01, 0x81, 0x03, 0xC0,
+];
+
+pub fn mouse_report(buttons: u8, dx: i32, dy: i32, wheel: i32) -> [u8; 6] {
+    let x = (dx.clamp(-32767, 32767) as i16).to_le_bytes();
+    let y = (dy.clamp(-32767, 32767) as i16).to_le_bytes();
+    [
+        buttons & 0x1f,
+        x[0],
+        x[1],
+        y[0],
+        y[1],
+        wheel.clamp(-127, 127) as i8 as u8,
+    ]
+}
+
+pub fn boot_mouse_report(report: &[u8]) -> Vec<u8> {
+    if report.len() != 6 {
+        return vec![0; 3];
+    }
+    let x = i16::from_le_bytes([report[1], report[2]]).clamp(-127, 127) as i8 as u8;
+    let y = i16::from_le_bytes([report[3], report[4]]).clamp(-127, 127) as i8 as u8;
+    vec![report[0] & 7, x, y]
+}
+
+#[derive(Default)]
+pub struct KeyboardState {
+    keys: BTreeSet<u8>,
+    modifiers: u8,
+}
+
+impl KeyboardState {
+    pub fn update(&mut self, vk: u32, scan: u32, extended: bool, down: bool) -> bool {
+        if let Some(bit) = modifier(vk, scan, extended) {
+            if down {
+                self.modifiers |= 1 << bit;
+            } else {
+                self.modifiers &= !(1 << bit);
+            }
+            return true;
+        }
+        if let Some(usage) = key_usage(vk) {
+            if down {
+                self.keys.insert(usage);
+            } else {
+                self.keys.remove(&usage);
+            }
+            return true;
+        }
+        false
+    }
+    pub fn report(&self) -> [u8; 8] {
+        let mut report = [0; 8];
+        report[0] = self.modifiers;
+        if self.keys.len() > 6 {
+            report[2..].fill(1);
+        } else {
+            for (i, key) in self.keys.iter().enumerate() {
+                report[i + 2] = *key;
+            }
+        }
+        report
+    }
+    pub fn clear(&mut self) {
+        self.keys.clear();
+        self.modifiers = 0;
+    }
+}
+
+fn modifier(vk: u32, scan: u32, extended: bool) -> Option<u8> {
+    match vk {
+        0x11 => Some(if extended { 4 } else { 0 }),
+        0x10 => Some(if scan == 0x36 { 5 } else { 1 }),
+        0x12 => Some(if extended { 6 } else { 2 }),
+        0xA2 => Some(0),
+        0xA0 => Some(1),
+        0xA4 => Some(2),
+        0x5B => Some(3),
+        0xA3 => Some(4),
+        0xA1 => Some(5),
+        0xA5 => Some(6),
+        0x5C => Some(7),
+        _ => None,
+    }
+}
+
+pub fn key_usage(vk: u32) -> Option<u8> {
+    Some(match vk {
+        0x41..=0x5A => (vk - 0x41 + 4) as u8,
+        0x31..=0x39 => (vk - 0x31 + 0x1E) as u8,
+        0x30 => 0x27,
+        0x0D => 0x28,
+        0x1B => 0x29,
+        0x08 => 0x2A,
+        0x09 => 0x2B,
+        0x20 => 0x2C,
+        0xBD => 0x2D,
+        0xBB => 0x2E,
+        0xDB => 0x2F,
+        0xDD => 0x30,
+        0xDC => 0x31,
+        0xBA => 0x33,
+        0xDE => 0x34,
+        0xC0 => 0x35,
+        0xBC => 0x36,
+        0xBE => 0x37,
+        0xBF => 0x38,
+        0x14 => 0x39,
+        0x70..=0x7B => (vk - 0x70 + 0x3A) as u8,
+        0x2C => 0x46,
+        0x91 => 0x47,
+        0x13 => 0x48,
+        0x2D => 0x49,
+        0x24 => 0x4A,
+        0x21 => 0x4B,
+        0x2E => 0x4C,
+        0x23 => 0x4D,
+        0x22 => 0x4E,
+        0x27 => 0x4F,
+        0x25 => 0x50,
+        0x28 => 0x51,
+        0x26 => 0x52,
+        0x90 => 0x53,
+        0x6F => 0x54,
+        0x6A => 0x55,
+        0x6D => 0x56,
+        0x6B => 0x57,
+        0x61..=0x69 => (vk - 0x61 + 0x59) as u8,
+        0x60 => 0x62,
+        0x6E => 0x63,
+        0xE2 => 0x64,
+        0x5D => 0x65,
+        _ => return None,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn report_map_has_pinned_identity() {
+        assert_eq!(REPORT_MAP_VERSION, 3);
+        assert!(REPORT_MAP.windows(2).any(|v| v == [0x85, 5]));
+    }
+    #[test]
+    fn signed_mouse_limits_match_descriptor() {
+        assert_eq!(
+            mouse_report(0xff, -40000, 40000, -500),
+            [31, 1, 128, 255, 127, 129]
+        );
+        assert_eq!(
+            boot_mouse_report(&mouse_report(5, -300, 400, 0)),
+            [5, 129, 127]
+        );
+    }
+    #[test]
+    fn keyboard_release_clears_modifier_and_every_key() {
+        let mut keyboard = KeyboardState::default();
+        keyboard.update(0x11, 0, false, true);
+        keyboard.update(0x41, 0, false, true);
+        assert_eq!(keyboard.report(), [1, 0, 4, 0, 0, 0, 0, 0]);
+        keyboard.clear();
+        assert_eq!(keyboard.report(), [0; 8]);
+    }
+    #[test]
+    fn six_key_rollover_recovers_after_release() {
+        let mut keyboard = KeyboardState::default();
+        for vk in 0x41..=0x47 {
+            keyboard.update(vk, 0, false, true);
+        }
+        assert_eq!(&keyboard.report()[2..], &[1; 6]);
+        keyboard.update(0x47, 0, false, false);
+        assert_eq!(&keyboard.report()[2..], &[4, 5, 6, 7, 8, 9]);
+    }
+}
